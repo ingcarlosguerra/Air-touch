@@ -134,7 +134,7 @@ try:
             pyautogui.moveTo(cx, cy)
 
             # Hace clic en la posición actual del cursor
-            pyautogui.click()
+            # pyautogui.click()
             import time
             time.sleep(0.2) 
 

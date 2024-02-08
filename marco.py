@@ -28,6 +28,10 @@ current_corner = 0  # Índice de la esquina actual que se está moviendo
 # Abrir la cámara
 cap = cv2.VideoCapture(0)
 
+# Configurar la ventana de la cámara y establecer la función de callback del mouse
+cv2.namedWindow('Camera')
+cv2.setMouseCallback('Camera', on_mouse)
+
 while True:
     ret, frame = cap.read()
 
@@ -51,8 +55,9 @@ while True:
     key = cv2.waitKey(1)
     if key == ord('q') or key == 27:  # 27 es el código ASCII de la tecla 'Esc'
         break
+    elif key == 32:  # 32 es el código ASCII de la barra espaciadora (reiniciar las esquinas)
+        corners = [(100, 100), (300, 100), (300, 300), (100, 300)]
 
 # Liberar recursos
 cap.release()
 cv2.destroyAllWindows()
-

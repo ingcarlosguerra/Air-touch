@@ -1,10 +1,3 @@
-## License: Apache 2.0. See LICENSE file in root directory.
-## Copyright(c) 2017 Intel Corporation. All Rights Reserved.
-
-#####################################################
-##              Align Depth to Color               ##
-#####################################################
-
 # First import the library
 import pyrealsense2 as rs
 # Import Numpy for easy array manipulation
@@ -65,7 +58,7 @@ print("Print min:", clipping_distance_min,  "printo max:", clipping_distance_max
 align_to = rs.stream.color
 align = rs.align(align_to)
 
-########################################################################################################################
+
 # Función de callback para eventos del mouse
 def on_mouse(event, x, y, flags, param):
     global corners, dragging, current_corner
@@ -93,39 +86,7 @@ current_corner = 0  # Índice de la esquina actual que se está moviendo
 # Configurar la ventana de la cámara y establecer la función de callback del mouse
 cv2.namedWindow('Camera')
 cv2.setMouseCallback('Camera', on_mouse)
-
-# Abrir la cámara
-cap = cv2.VideoCapture(0)
-
-while True:
-    ret, frame = cap.read()
-
-    if not ret:
-        print("Error al capturar el fotograma.")
-        break
-
-    # Dibujar el rectángulo con esquinas móviles
-    cv2.polylines(frame, [np.array(corners)], isClosed=True, color=(255, 0, 0), thickness=2)
-
-    # Mostrar las coordenadas de cada esquina en la ventana
-    for i, corner in enumerate(corners):
-        cv2.circle(frame, corner, 5, (0, 255, 0), -1)
-        cv2.putText(frame, f'{corner}', (corner[0] + 10, corner[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
-
-    # Mostrar la imagen en la ventana
-    cv2.imshow('Camera', frame)
-
-    # Esperar 1 milisegundo y verificar si se presionó la tecla 'q' o 'Esc'
-    key = cv2.waitKey(1)
-    if key == ord('q') or key == 27:  # 27 es el código ASCII de la tecla 'Esc'
-        break
-
-# Liberar recursos
-cap.release()
-cv2.destroyAllWindows()
-
-#######################################################################################################################
+cv2.namedWindow('grid')
 # Streaming loop
 try:
     while True:
@@ -145,6 +106,8 @@ try:
             continue
 
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
+        depth_image=  cv2.rotate(depth_image, cv2.ROTATE_180)
+
         color_image = np.asanyarray(color_frame.get_data())
         blue_image = color_image.copy()
         blue_image[:, :, 0] = 0
@@ -155,12 +118,51 @@ try:
         depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
         # bg_removed = np.where((depth_image_3d > clipping_distance_max) | (depth_image_3d <= 0), grey_color, color_image)
         bg_removed = np.where((depth_image_3d < clipping_distance_min) | (depth_image_3d > clipping_distance_max) | (depth_image_3d <= 0), grey_color,blue_image)
-        # Render images:
-        #   depth align to color on left
-        #   depth on right
-        # Convierte la imagen a HSV
-        # Cambiar el tamaño de la imagen
-        img_resized = cv2.resize(bg_removed, (1920, 1080), interpolation = cv2.INTER_AREA)
+
+        depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+                # Obtener las dimensiones de la imagen
+        # alto, ancho, canales = depth_colormap.shape
+        # print(f"Dimensiones de la imagen: Alto = {alto}, Ancho = {ancho}, Canales = {canales}")
+            # Dibujar el rectángulo con esquinas móviles
+        cv2.polylines(depth_colormap, [np.array(corners)], isClosed=True, color=(0, 0, 255), thickness=2)
+        # Mostrar las coordenadas de cada esquina en la ventana
+        # for i, corner in enumerate(corners):
+        #     cv2.circle(depth_colormap, corner, 5, (0, 255, 0), -1)
+        #     cv2.putText(depth_colormap, f'{corner}', (corner[0] + 10, corner[1] - 10),
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
+        
+        corner1=(corners[0][0],corners[0][1])
+        corner2=(corners[1][0],corners[1][1])
+        corner3=(corners[2][0],corners[2][1])
+        corner4=(corners[3][0],corners[3][1])
+
+        npcorners = np.array([corner1,corner2,corner3,corner4], dtype="float32")
+                # the width of the new frame
+        widthA = np.sqrt(((corner3[0] - corner4[0]) ** 2) + ((corner3[1] - corner4[1]) ** 2))
+        widthB = np.sqrt(((corner2[0] - corner1[0]) ** 2) + ((corner2[1] - corner1[1]) ** 2))
+
+        #the height of the new frame
+        heightA = np.sqrt(((corner2[0] - corner3[0]) ** 2) + ((corner2[1] - corner3[1]) ** 2))
+        heightB = np.sqrt(((corner1[0] - corner4[0]) ** 2) + ((corner1[1] - corner4[1]) ** 2))
+
+        #final dimensions
+        maxWidth = max(int(widthA), int(widthB))
+        maxHeight = max(int(heightA), int(heightB))
+
+        # construct our destination points which will be used to
+        # map the screen to a top-down, "birds eye" view
+        dst = np.array([
+            [0, 0],
+            [maxWidth - 1, 0],
+            [maxWidth - 1, maxHeight - 1],
+            [0, maxHeight - 1]], dtype = "float32")
+
+        M = cv2.getPerspectiveTransform(npcorners, dst)
+        grid = cv2.warpPerspective(bg_removed, M, (maxWidth, maxHeight))
+        # grid es la variable que me permite solo analizar el area deseada
+
+
+        img_resized = cv2.resize(grid, (1920, 1080), interpolation = cv2.INTER_AREA)
         hsv = cv2.cvtColor(img_resized, cv2.COLOR_BGR2HSV)
         # Define el rango de colores rojos en HSV
         lower_red = np.array([0, 50, 50])
@@ -173,10 +175,16 @@ try:
         mask = mask1 + mask2
         # Encuentra los contornos de la máscara
         contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+                # Filtra los contornos por área mínima deseada
+        min_contour_area = 1000  # Puedes ajustar este valor según sea necesario
+
+        filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
+
         
-        if len(contours) > 0:
+        if len(filtered_contours) > 0:
                     # Encuentra el contorno más grande
-            largest_contour = max(contours, key=cv2.contourArea)
+            largest_contour = max(filtered_contours, key=cv2.contourArea)
 
             # Encuentra el centro del contorno más grande
             M = cv2.moments(largest_contour)
@@ -194,18 +202,22 @@ try:
             # Hace clic en la posición actual del cursor
             pyautogui.click()
             import time
-            time.sleep(0.3) 
+            time.sleep(0.2) 
 
-
-        depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-        images = np.hstack((bg_removed, depth_colormap))
-
-        cv2.namedWindow('Align Example', cv2.WINDOW_NORMAL)
-        cv2.imshow('Align Example', images)
+        cv2.imshow('Camera', depth_colormap)
+        cv2.imshow('grid', grid)
+        # Obtener las dimensiones de la imagen
+        # alto, ancho, canales = grid.shape
+        # print(f"Dimensiones de la imagen: Alto = {alto}, Ancho = {ancho}, Canales = {canales}")
         key = cv2.waitKey(1)
         # Press esc or 'q' to close the image window
         if key & 0xFF == ord('q') or key == 27:
+            print(corners)
             cv2.destroyAllWindows()
             break
+    
+
+
 finally:
     pipeline.stop()
+    cv2.destroyAllWindows()
