@@ -46,8 +46,8 @@ print("Depth Scale is: " , depth_scale)
 
 # We will be removing the background of objects more than
 #  clipping_distance_in_meters meters away
-clipping_distance_in_meters_max = 1.1 #1 meter
-clipping_distance_in_meters_min = 1.0 #1 meter
+clipping_distance_in_meters_max = 1.95 #1 meter
+clipping_distance_in_meters_min = 1.86#1 meter
 
 clipping_distance_max = clipping_distance_in_meters_max / depth_scale
 clipping_distance_min = clipping_distance_in_meters_min / depth_scale
@@ -106,7 +106,7 @@ try:
             continue
 
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
-        depth_image=  cv2.rotate(depth_image, cv2.ROTATE_180)
+        # depth_image=  cv2.rotate(depth_image, cv2.ROTATE_180)
 
         color_image = np.asanyarray(color_frame.get_data())
         blue_image = color_image.copy()
@@ -177,7 +177,7 @@ try:
         contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
                 # Filtra los contornos por área mínima deseada
-        min_contour_area = 1000  # Puedes ajustar este valor según sea necesario
+        min_contour_area = 2000  # Puedes ajustar este valor según sea necesario
 
         filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
 
@@ -202,7 +202,7 @@ try:
             # Hace clic en la posición actual del cursor
             pyautogui.click()
             import time
-            time.sleep(0.2) 
+            time.sleep(0.35) 
 
         cv2.imshow('Camera', depth_colormap)
         cv2.imshow('grid', grid)
@@ -220,4 +220,3 @@ try:
 
 finally:
     pipeline.stop()
-    cv2.destroyAllWindows()
