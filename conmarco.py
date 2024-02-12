@@ -9,17 +9,12 @@ import pyautogui
 
 # Create a pipeline
 pipeline = rs.pipeline()
-
-# Create a config and configure the pipeline to stream
-#  different resolutions of color and depth streams
 config = rs.config()
-
 # Get device product line for setting a supporting resolution
 pipeline_wrapper = rs.pipeline_wrapper(pipeline)
 pipeline_profile = config.resolve(pipeline_wrapper)
 device = pipeline_profile.get_device()
 device_product_line = str(device.get_info(rs.camera_info.product_line))
-
 found_rgb = False
 for s in device.sensors:
     if s.get_info(rs.camera_info.name) == 'RGB Camera':
@@ -38,7 +33,6 @@ else:
 
 # Start streaming
 profile = pipeline.start(config)
-
 # Getting the depth sensor's depth scale (see rs-align example for explanation)
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
@@ -46,18 +40,14 @@ print("Depth Scale is: " , depth_scale)
 
 # We will be removing the background of objects more than
 #  clipping_distance_in_meters meters away
-clipping_distance_in_meters_max = 1.95 #1 meter
-clipping_distance_in_meters_min = 1.86#1 meter
+clipping_distance_in_meters_max = 1.2#1 meter
+clipping_distance_in_meters_min = 1.1#1 meter
 
 clipping_distance_max = clipping_distance_in_meters_max / depth_scale
 clipping_distance_min = clipping_distance_in_meters_min / depth_scale
 print("Print min:", clipping_distance_min,  "printo max:", clipping_distance_max)
-# Create an align object
-# rs.align allows us to perform alignment of depth frames to others frames
-# The "align_to" is the stream type to which we plan to align depth frames.
 align_to = rs.stream.color
 align = rs.align(align_to)
-
 
 # Función de callback para eventos del mouse
 def on_mouse(event, x, y, flags, param):
@@ -118,19 +108,8 @@ try:
         depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
         # bg_removed = np.where((depth_image_3d > clipping_distance_max) | (depth_image_3d <= 0), grey_color, color_image)
         bg_removed = np.where((depth_image_3d < clipping_distance_min) | (depth_image_3d > clipping_distance_max) | (depth_image_3d <= 0), grey_color,blue_image)
-
         depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-                # Obtener las dimensiones de la imagen
-        # alto, ancho, canales = depth_colormap.shape
-        # print(f"Dimensiones de la imagen: Alto = {alto}, Ancho = {ancho}, Canales = {canales}")
-            # Dibujar el rectángulo con esquinas móviles
-        cv2.polylines(depth_colormap, [np.array(corners)], isClosed=True, color=(0, 0, 255), thickness=2)
-        # Mostrar las coordenadas de cada esquina en la ventana
-        # for i, corner in enumerate(corners):
-        #     cv2.circle(depth_colormap, corner, 5, (0, 255, 0), -1)
-        #     cv2.putText(depth_colormap, f'{corner}', (corner[0] + 10, corner[1] - 10),
-        #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
-        
+        cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(0, 0, 255), thickness=2)
         corner1=(corners[0][0],corners[0][1])
         corner2=(corners[1][0],corners[1][1])
         corner3=(corners[2][0],corners[2][1])
@@ -161,7 +140,6 @@ try:
         grid = cv2.warpPerspective(bg_removed, M, (maxWidth, maxHeight))
         # grid es la variable que me permite solo analizar el area deseada
 
-
         img_resized = cv2.resize(grid, (1920, 1080), interpolation = cv2.INTER_AREA)
         hsv = cv2.cvtColor(img_resized, cv2.COLOR_BGR2HSV)
         # Define el rango de colores rojos en HSV
@@ -181,7 +159,6 @@ try:
 
         filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
 
-        
         if len(filtered_contours) > 0:
                     # Encuentra el contorno más grande
             largest_contour = max(filtered_contours, key=cv2.contourArea)
@@ -194,21 +171,20 @@ try:
             else:
                 cx = int(M['m10'] / M['m00'])
                 cy = int(M['m01'] / M['m00'])
+
+         
+            
             # Imprime las coordenadas del centro del área
             print("El centro del área roja está en las coordenadas ({}, {})".format(cx, cy))
             # Mueve el cursor a la posición deseada
-            pyautogui.moveTo(cx, cy)
-
-            # Hace clic en la posición actual del cursor
-            pyautogui.click()
+            # pyautogui.moveTo(cx, cy)
+            # # Hace clic en la posición actual del cursor
+            # pyautogui.click()
             import time
             time.sleep(0.35) 
 
-        cv2.imshow('Camera', depth_colormap)
+        cv2.imshow('Camera', color_image)
         cv2.imshow('grid', grid)
-        # Obtener las dimensiones de la imagen
-        # alto, ancho, canales = grid.shape
-        # print(f"Dimensiones de la imagen: Alto = {alto}, Ancho = {ancho}, Canales = {canales}")
         key = cv2.waitKey(1)
         # Press esc or 'q' to close the image window
         if key & 0xFF == ord('q') or key == 27:
@@ -216,7 +192,5 @@ try:
             cv2.destroyAllWindows()
             break
     
-
-
 finally:
     pipeline.stop()
