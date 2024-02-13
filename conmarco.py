@@ -171,9 +171,7 @@ try:
             else:
                 cx = int(M['m10'] / M['m00'])
                 cy = int(M['m01'] / M['m00'])
-
          
-            
             # Imprime las coordenadas del centro del área
             print("El centro del área roja está en las coordenadas ({}, {})".format(cx, cy))
             # Mueve el cursor a la posición deseada
@@ -181,7 +179,7 @@ try:
             # # Hace clic en la posición actual del cursor
             # pyautogui.click()
             import time
-            time.sleep(0.35) 
+            time.sleep(0.4) 
 
         cv2.imshow('Camera', color_image)
         cv2.imshow('grid', grid)
