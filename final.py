@@ -31,10 +31,11 @@ else:
 profile = pipeline.start(config)
 
 depth_sensor = profile.get_device().first_depth_sensor()
+
 depth_scale = depth_sensor.get_depth_scale()
 
-clipping_distance_in_meters_max = 1.2  # metros  # Distancia maxima a la pared sin guenerar ruido
-clipping_distance_in_meters_min = 1.1  # metros   # se recomienda dar unos 10 cm de la pared
+clipping_distance_in_meters_max = 1.90# metros  # Distancia maxima a la pared sin guenerar ruido
+clipping_distance_in_meters_min = 1.82# metros   # se recomienda dar unos 10 cm de la pared
 
 clipping_distance_max = clipping_distance_in_meters_max / depth_scale
 clipping_distance_min = clipping_distance_in_meters_min / depth_scale
@@ -91,7 +92,9 @@ try:
             continue
 
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
+        depth_image=  cv2.rotate(depth_image, cv2.ROTATE_180)       ### camara rotada de profundidad
         color_image = np.asanyarray(color_frame.get_data())
+        color_image=  cv2.rotate(color_image, cv2.ROTATE_180)     ### camara rotada de RGB
 
         blue_image = color_image.copy()
         blue_image[:, :, 0] = 0
@@ -136,25 +139,25 @@ try:
             mask2 = cv2.inRange(hsv, lower_red, upper_red)
             mask = mask1 + mask2
             contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            min_contour_area = 2000  # Puedes ajustar este valor según sea necesario es un filtro de contorno por area
+            min_contour_area = 1500  # Puedes ajustar este valor según sea necesario es un filtro de contorno por area
             filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
 
             if len(filtered_contours) > 0:
                 largest_contour = max(filtered_contours, key=cv2.contourArea)
                 M = cv2.moments(largest_contour)
                 if M['m00'] == 0:
-                    cx = 0
+                    cx = 1920
                 else:
-                    cx = int(M['m10'] / M['m00']) + 1920  # el 1920 indica que se corren las cordenadas para una pantalla estendida
+                    cx = 1920 + int(M['m10'] / M['m00'])  # el 1920 indica que se corren las cordenadas para una pantalla estendida
                     cy = int(M['m01'] / M['m00'])
 
                 print("El centro del área roja está en las coordenadas ({}, {})".format(cx, cy))
                 # Mueve el cursor a la posición deseada
                 pyautogui.moveTo(cx, cy)
                 # # Hace clic en la posición actual del cursor
-                # pyautogui.click()
+                pyautogui.click(cx,cy)
                 import time
-                time.sleep(0.4)
+                time.sleep(0.38)
 
         cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(0, 255, 0), thickness=2)
 
