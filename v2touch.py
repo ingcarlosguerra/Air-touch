@@ -1,72 +1,64 @@
 import cv2
+import mediapipe as mp
 import numpy as np
 import pyrealsense2 as rs
 
-# Función para encontrar el contorno de la mano
-def find_hand_contour(depth_frame):
-    # Convierte el fotograma de profundidad a una matriz numpy
-    depth_image = np.asanyarray(depth_frame.get_data())
+# Inicializar MediaPipe Hand Solution
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+mp_drawing = mp.solutions.drawing_utils
 
-    # Asegura que la imagen de profundidad sea de tipo uint8
-    depth_image = np.uint8(depth_image)
-
-    # Aplica un umbral para resaltar la mano
-    _, thresholded = cv2.threshold(depth_image, 1000, 255, cv2.THRESH_BINARY)
-
-    # Encuentra contornos en la imagen umbralizada
-    contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Devuelve el contorno de la mano (seleccionamos el contorno más grande)
-    hand_contour = max(contours, key=cv2.contourArea, default=None)
-
-    return hand_contour
-
-# Configura el objeto de configuración de la cámara RealSense
+# Configuración inicial de la cámara RealSense
+pipeline = rs.pipeline()
 config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-
-# Inicializa la cámara RealSense
-pipeline = rs.pipeline()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 pipeline.start(config)
 
 try:
     while True:
-        # Espera a que haya un nuevo conjunto de fotogramas
+        # Obtener frames de la cámara
         frames = pipeline.wait_for_frames()
-
-        # Obtiene el fotograma de profundidad
         depth_frame = frames.get_depth_frame()
-
-        if not depth_frame:
+        color_frame = frames.get_color_frame()
+        if not depth_frame or not color_frame:
             continue
 
-        # Encuentra el contorno de la mano
-        hand_contour = find_hand_contour(depth_frame)
+        # Convertir imágenes a arreglos numpy
+        color_image = np.asanyarray(color_frame.get_data())
+        color_image_for_drawing = color_image.copy()
 
-        if hand_contour is not None:
-            # Calcula el centroide del contorno de la mano
-            M = cv2.moments(hand_contour)
-            cx = int(M["m10"] / M["m00"])
-            cy = int(M["m01"] / M["m00"])
+        # Convertir la imagen BGR a RGB
+        rgb_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
 
-            # Obtiene la distancia al centroide de la mano
-            distance = depth_frame.get_distance(cx, cy)
+        # Procesamiento de detección de manos
+        results = hands.process(rgb_image)
+        
+        # Dibujar resultados de la detección de manos
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                # Dibujar los landmarks de la mano
+                mp_drawing.draw_landmarks(color_image_for_drawing, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-            # Dibuja el contorno de la mano y muestra la distancia en la consola
-            cv2.drawContours(depth_image, [hand_contour], -1, (0, 255, 0), 2)
-            cv2.circle(depth_image, (cx, cy), 5, (0, 0, 255), -1)
-            print(f"Distancia a la mano: {distance:.3f} metros")
+                # Obtener coordenadas del primer landmark (muñeca) como ejemplo
+                wrist_landmark = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
+                x_pixel, y_pixel = int(wrist_landmark.x * color_image.shape[1]), int(wrist_landmark.y * color_image.shape[0])
+                depth = depth_frame.get_distance(x_pixel, y_pixel)
 
-        # Muestra la imagen de profundidad
-        cv2.imshow("Depth Image", depth_image)
+                if depth > 0:  # Asegurarse de que la profundidad es válida
+                    # Convertir coordenadas de píxeles a coordenadas del mundo real
+                    intrinsics = depth_frame.profile.as_video_stream_profile().intrinsics
+                    x, y, z = rs.rs2_deproject_pixel_to_point(intrinsics, [x_pixel, y_pixel], depth)
+                    cv2.putText(color_image_for_drawing, f'XYZ: {x:.2f}, {y:.2f}, {z:.2f}', (x_pixel, y_pixel - 10),
+                                cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255), 2)
 
-        # Rompe el bucle si se presiona la tecla 'q'
+        # Mostrar la imagen resultante
+        cv2.imshow('Hand Tracking', color_image_for_drawing)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
 finally:
-    # Cierra la conexión con la cámara RealSense
+    # Parar la transmisión
     pipeline.stop()
-    cv2.destroyAllWindows()
-
+    hands.close()
 
