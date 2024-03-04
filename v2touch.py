@@ -11,8 +11,8 @@ mp_drawing = mp.solutions.drawing_utils
 # Configuración inicial de la cámara RealSense
 pipeline = rs.pipeline()
 config = rs.config()
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
+config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 pipeline.start(config)
 
 try:
@@ -33,24 +33,30 @@ try:
 
         # Procesamiento de detección de manos
         results = hands.process(rgb_image)
-        
+
         # Dibujar resultados de la detección de manos
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 # Dibujar los landmarks de la mano
                 mp_drawing.draw_landmarks(color_image_for_drawing, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-                # Obtener coordenadas del primer landmark (muñeca) como ejemplo
-                wrist_landmark = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
-                x_pixel, y_pixel = int(wrist_landmark.x * color_image.shape[1]), int(wrist_landmark.y * color_image.shape[0])
-                depth = depth_frame.get_distance(x_pixel, y_pixel)
+                # Obtener coordenadas del landmark de la punta del dedo índice
+                index_tip_landmark = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+                x_pixel, y_pixel = int(index_tip_landmark.x * color_image.shape[1]), int(index_tip_landmark.y * color_image.shape[0])
 
+                # Intentar obtener la distancia de profundidad
+                try:
+                    depth = depth_frame.get_distance(x_pixel, y_pixel)
+                except RuntimeError as e:
+                    print(f"Error al obtener la distancia de profundidad: {e}")
+                    depth = 0  # Asumir una profundidad de cero si hay un error
+
+                # Mostrar las coordenadas en píxeles y la profundidad
+                cv2.putText(color_image_for_drawing, f'Pixel XY: {x_pixel}, {y_pixel}', (x_pixel, y_pixel - 20),
+                            cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 2)
                 if depth > 0:  # Asegurarse de que la profundidad es válida
-                    # Convertir coordenadas de píxeles a coordenadas del mundo real
-                    intrinsics = depth_frame.profile.as_video_stream_profile().intrinsics
-                    x, y, z = rs.rs2_deproject_pixel_to_point(intrinsics, [x_pixel, y_pixel], depth)
-                    cv2.putText(color_image_for_drawing, f'XYZ: {x:.2f}, {y:.2f}, {z:.2f}', (x_pixel, y_pixel - 10),
-                                cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255), 2)
+                    cv2.putText(color_image_for_drawing, f'Depth Z: {depth:.2f}m', (x_pixel, y_pixel - 40),
+                                cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 2)
 
         # Mostrar la imagen resultante
         cv2.imshow('Hand Tracking', color_image_for_drawing)
@@ -58,7 +64,9 @@ try:
             break
 
 finally:
-    # Parar la transmisión
+    # Parar la transmisión y cerrar todas las ventanas
     pipeline.stop()
     hands.close()
+    cv2.destroyAllWindows()
+
 
