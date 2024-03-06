@@ -5,7 +5,7 @@ import pyautogui
 import mediapipe as mp
 
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.48, min_tracking_confidence=0.5)
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.42, min_tracking_confidence=0.42)
 mp_drawing = mp.solutions.drawing_utils
 pipeline = rs.pipeline()
 config = rs.config()
@@ -26,9 +26,9 @@ if not found_rgb:
     exit(0)
 
 if device_product_line == 'L500':
-    config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
+    config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 15)
 else:
-    config.enable_stream(rs.stream.color, 1920, 1080, rs.format.bgr8, 30)
+    config.enable_stream(rs.stream.color, 1920, 1080, rs.format.bgr8, 15)
 
 profile = pipeline.start(config)
 align_to = rs.stream.color
