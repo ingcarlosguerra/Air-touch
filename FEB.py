@@ -61,13 +61,12 @@ def on_finish_button_click(event, x, y, flags, param):
             print("Finish Button Clicked!")
             is_finished = True
 
-corners = [(100, 100), (300, 100), (300, 300), (100, 300)]
+corners = [(300, 100), (1600, 100), (1600, 900), (300, 900)]
 dragging = False
 current_corner = 0
-
 cv2.namedWindow('Camera')
 cv2.setMouseCallback('Camera', on_mouse)
-button_x, button_y, button_w, button_h = 500, 600, 300, 50
+button_x, button_y, button_w, button_h = 800, 960, 300, 50
 finish_button_x, finish_button_y, finish_button_w, finish_button_h = 900, 600, 300, 50
 
 is_finished = False
@@ -111,23 +110,18 @@ try:
                 for hand_landmarks in results.multi_hand_landmarks:
                     mp_drawing.draw_landmarks(color_image_for_drawing, hand_landmarks, mp_hands.HAND_CONNECTIONS)
                     index_tip_landmark = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                    index_center_hand = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP]
-                    index_base_hand = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
                     x_pixel1, y_pixel1 = int(index_tip_landmark.x * color_image.shape[1]), int(index_tip_landmark.y * color_image.shape[0])
                     cv2.putText(color_image, f'Pixel XY: {x_pixel1}, {y_pixel1}', (50,100),
-                                cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 0), 2)
+                                cv2.FONT_HERSHEY_PLAIN, 3, (30,144,255), 2)
                     pyautogui.moveTo((x_pixel1 +1920),y_pixel1)
                     cv2.circle(color_image_for_drawing, (x_pixel1, y_pixel1), 15, (0, 255, 0), -1)
 
             cv2.imshow('grid', color_image_for_drawing)
             img_resized = cv2.resize(grid, (1920, 1080), interpolation=cv2.INTER_AREA)
 
-
-        cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(0, 255, 0), thickness=2)
-        cv2.putText(color_image, "Iniciar touch", (button_x, button_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(255, 0, 0), 2, cv2.LINE_AA)
-        cv2.rectangle(color_image, (button_x, button_y), (button_x + button_w, button_y + button_h), (255, 0, 0), 2)
-        cv2.putText(color_image, "Finalizar", (finish_button_x, finish_button_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(255, 0, 0), 2, cv2.LINE_AA)
-        cv2.rectangle(color_image, (finish_button_x, finish_button_y), (finish_button_x + finish_button_w, finish_button_y + finish_button_h), (255, 0, 0), 2)
+        cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(255,144,30), thickness=2)
+        cv2.putText(color_image, "Iniciar Touch", (button_x, button_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(255,144,30), 2, cv2.LINE_AA)
+        cv2.rectangle(color_image, (button_x, button_y), (button_x + button_w, button_y + button_h), (255,144,30), 2)
         cv2.imshow('Camera', color_image)
 
         key = cv2.waitKey(1)
