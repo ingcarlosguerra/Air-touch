@@ -3,9 +3,10 @@ import numpy as np
 import cv2
 import pyautogui
 import mediapipe as mp
+import time
 
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.42, min_tracking_confidence=0.42)
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.40, min_tracking_confidence=0.40)
 mp_drawing = mp.solutions.drawing_utils
 pipeline = rs.pipeline()
 config = rs.config()
@@ -26,9 +27,9 @@ if not found_rgb:
     exit(0)
 
 if device_product_line == 'L500':
-    config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 15)
+    config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
 else:
-    config.enable_stream(rs.stream.color, 1920, 1080, rs.format.bgr8, 15)
+    config.enable_stream(rs.stream.color, 1920, 1080, rs.format.bgr8, 30)
 
 profile = pipeline.start(config)
 align_to = rs.stream.color
@@ -114,6 +115,10 @@ try:
                     cv2.putText(color_image, f'Pixel XY: {x_pixel1}, {y_pixel1}', (50,100),
                                 cv2.FONT_HERSHEY_PLAIN, 3, (30,144,255), 2)
                     pyautogui.moveTo((x_pixel1 +1920),y_pixel1)
+                    pyautogui.click(x_pixel1 +1920,y_pixel1)
+                    # time.sleep(0.5)
+                    
+
                     cv2.circle(color_image_for_drawing, (x_pixel1, y_pixel1), 15, (0, 255, 0), -1)
 
             cv2.imshow('grid', color_image_for_drawing)
