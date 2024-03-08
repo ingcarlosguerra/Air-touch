@@ -98,45 +98,45 @@ try:
             rgb_image = cv2.cvtColor(grid, cv2.COLOR_BGR2RGB)
             results = hands.process(rgb_image)
             color_image_for_drawing = grid.copy()
-
-
-            # Convertir la imagen a espacio de color HSV
             hsv = cv2.cvtColor(color_image_for_drawing, cv2.COLOR_BGR2HSV)
-
-            # Definir rangos de color rojo en HSV
-            # Nota: El rojo puede tener dos rangos debido a su posición en el espectro de color
-            lower_red1 = np.array([0, 120, 70])
-            upper_red1 = np.array([10, 255, 255])
-            lower_red2 = np.array([170, 120, 70])
-            upper_red2 = np.array([180, 255, 255])
-
-            # Crear máscaras para color rojo
-            mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-            mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-            mask = cv2.bitwise_or(mask1, mask2)
-
-            # Aplicar la máscara a la imagen original
-            red_regions = cv2.bitwise_and(color_image_for_drawing, color_image_for_drawing, mask=mask)
-
-            # Encontrar contornos en la máscara
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-            # Suponiendo que queremos el contorno más grande si hay varios
-            if contours:
-                max_contour = max(contours, key=cv2.contourArea)
-                centroid = find_centroid(max_contour)
-                if centroid:
-                    print("Centroide del contorno rojo:", centroid)
-                    # Dibujar el contorno y el centroide en la imagen de contornos
-                    cv2.drawContours(color_image_for_drawing, [max_contour], -1, (0, 255, 0), 2)  # Dibuja en verde para visibilidad
-                    cv2.circle(color_image_for_drawing, centroid, 5, (255, 255, 255), -1)
-                else:
-                    print("No se pudo encontrar el centroide.")
-            else:
-                print("No se encontraron contornos rojos.")
+            # lower_red1 = np.array([0, 70, 50])
+            # upper_red1 = np.array([10, 255, 255])
+            # lower_red2 = np.array([170, 70, 50])
+            # upper_red2 = np.array([180, 255, 255])
+            # mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+            # mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+            # mask = cv2.bitwise_or(mask1, mask2)
+            # red_detection = cv2.bitwise_and(color_image_for_drawing, color_image_for_drawing, mask=mask)
 
 
-            cv2.imshow('grid', mask)
+            lower_green = np.array([35, 100, 50]) 
+            upper_green = np.array([85, 255, 255])  
+
+            # Crear una máscara que solo contenga el color verde
+            mask = cv2.inRange(hsv, lower_green, upper_green)
+            gaussian_blur = cv2.GaussianBlur(mask, (5, 5), 0)
+            contours, _ = cv2.findContours(gaussian_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            circles = cv2.HoughCircles(gaussian_blur, 
+                                    cv2.HOUGH_GRADIENT, 1, 20, 
+                                    param1=50, param2=30, minRadius=0, maxRadius=0)
+            if circles is not None:
+                circles = np.uint16(np.around(circles))
+                for i in circles[0, :]:
+                    # Dibujar el círculo exterior
+                    cv2.circle(gaussian_blur, (i[0], i[1]), i[2], (0, 255, 0), 2)
+                    # Dibujar el centro del círculo
+                    cv2.circle(gaussian_blur, (i[0], i[1]), 2, (0, 0, 255), 3)
+                    # Imprimir las coordenadas del centro
+                    print(f"Centro del círculo: ({i[0]}, {i[1]})")
+
+
+            cv2.imshow('Rojo detectado', gaussian_blur) 
+            # cv2.imshow('Rojo detectado', gaussian_blur) 
+
+            # cv2.imshow('grid',red_regions)
+
+
             img_resized = cv2.resize(grid, (1920, 1080), interpolation=cv2.INTER_AREA)
 
         cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(255,144,30), thickness=2)
