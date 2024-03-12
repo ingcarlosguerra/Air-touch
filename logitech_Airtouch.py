@@ -99,45 +99,43 @@ try:
             results = hands.process(rgb_image)
             color_image_for_drawing = grid.copy()
             hsv = cv2.cvtColor(color_image_for_drawing, cv2.COLOR_BGR2HSV)
-            # lower_red1 = np.array([0, 70, 50])
-            # upper_red1 = np.array([10, 255, 255])
-            # lower_red2 = np.array([170, 70, 50])
-            # upper_red2 = np.array([180, 255, 255])
-            # mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-            # mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-            # mask = cv2.bitwise_or(mask1, mask2)
-            # red_detection = cv2.bitwise_and(color_image_for_drawing, color_image_for_drawing, mask=mask)
-
-
-            lower_green = np.array([35, 100, 50]) 
+            lower_green = np.array([60, 100, 50]) 
             upper_green = np.array([85, 255, 255])  
-
-            # Crear una máscara que solo contenga el color verde
             mask = cv2.inRange(hsv, lower_green, upper_green)
             gaussian_blur = cv2.GaussianBlur(mask, (5, 5), 0)
-            contours, _ = cv2.findContours(gaussian_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            img_resized = cv2.resize(gaussian_blur, (1920, 1080), interpolation=cv2.INTER_AREA)
+            contours, _ = cv2.findContours(img_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-            circles = cv2.HoughCircles(gaussian_blur, 
-                                    cv2.HOUGH_GRADIENT, 1, 20, 
-                                    param1=50, param2=30, minRadius=0, maxRadius=0)
-            if circles is not None:
-                circles = np.uint16(np.around(circles))
-                for i in circles[0, :]:
-                    # Dibujar el círculo exterior
-                    cv2.circle(gaussian_blur, (i[0], i[1]), i[2], (0, 255, 0), 2)
-                    # Dibujar el centro del círculo
-                    cv2.circle(gaussian_blur, (i[0], i[1]), 2, (0, 0, 255), 3)
-                    # Imprimir las coordenadas del centro
-                    print(f"Centro del círculo: ({i[0]}, {i[1]})")
+            if contours:
+                largest_contour = max(contours, key=cv2.contourArea)
+                area = cv2.contourArea(largest_contour)
+                if area > 1000:
+                    largest_contour = max(contours, key=cv2.contourArea)
+                    M = cv2.moments(largest_contour)
+                    if M["m00"] != 0:
+                        cX = int(M["m10"] / M["m00"])
+                        cY = int(M["m01"] / M["m00"])
+                    else:
+                        cX, cY = 0, 0 
 
+                    cv2.drawContours(img_resized, [largest_contour], -1, (0, 255, 0), 2)
+                    cv2.circle(img_resized, (cX, cY), 7, (255, 0, 0), -1)
+                    pyautogui.moveTo((cX+1920),cY)
 
-            cv2.imshow('Rojo detectado', gaussian_blur) 
-            # cv2.imshow('Rojo detectado', gaussian_blur) 
+            # circles = cv2.HoughCircles(gaussian_blur, 
+            #                         cv2.HOUGH_GRADIENT, 1, 20, 
+            #                         param1=50, param2=30, minRadius=0, maxRadius=0)
+            # if circles is not None:
+            #     circles = np.uint16(np.around(circles))
+            #     for i in circles[0, :]:
+            #         # Dibujar el círculo exterior
+            #         cv2.circle(gaussian_blur, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            #         # Dibujar el centro del círculo
+            #         cv2.circle(gaussian_blur, (i[0], i[1]), 2, (0, 0, 255), 3)
+            #         # Imprimir las coordenadas del centro
+            #         print(f"Centro del círculo: ({i[0]}, {i[1]})")
 
-            # cv2.imshow('grid',red_regions)
-
-
-            img_resized = cv2.resize(grid, (1920, 1080), interpolation=cv2.INTER_AREA)
+            cv2.imshow('Verde detectado', img_resized) 
 
         cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(255,144,30), thickness=2)
         cv2.putText(color_image, "Iniciar Touch", (button_x, button_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(255,144,30), 2, cv2.LINE_AA)
