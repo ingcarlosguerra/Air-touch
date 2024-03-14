@@ -10,11 +10,11 @@ if not cap.isOpened():
     print("No se puede abrir la cámara")
     exit()
 
-desired_width = 1920
-desired_height = 1080
+desired_width = 3840  #3840 4K
+desired_height = 2160  #2160  4K
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
-desired_fps = 60
+desired_fps = 30
 cap.set(cv2.CAP_PROP_FPS, desired_fps)
 
 mp_hands = mp.solutions.hands
@@ -141,6 +141,11 @@ try:
         cv2.putText(color_image, "Iniciar Touch", (button_x, button_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(255,144,30), 2, cv2.LINE_AA)
         cv2.rectangle(color_image, (button_x, button_y), (button_x + button_w, button_y + button_h), (255,144,30), 2)
         cv2.imshow('Camera', color_image)
+        # Obtiene las dimensiones de la imagen
+        alto, ancho, canales = color_image.shape
+
+        # Imprime las dimensiones
+        print(f"Ancho: {ancho}, Alto: {alto}, Canales: {canales}")
 
         key = cv2.waitKey(1)
 
