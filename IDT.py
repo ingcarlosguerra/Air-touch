@@ -13,11 +13,14 @@ desired_width = 1920  #3840 4K
 desired_height = 1080  #2160  4K
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
-desired_fps = 60
+desired_fps = 30
 cap.set(cv2.CAP_PROP_FPS, desired_fps)
 
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.40, min_tracking_confidence=0.40)
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.70, min_tracking_confidence=0.60)
+# Inicializar la clase de la detección de pose
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose()
 mp_drawing = mp.solutions.drawing_utils
 pyautogui.FAILSAFE = False
 arranque = False 
@@ -57,7 +60,7 @@ try:
     while not is_finished:
         ret,frame = cap.read()
         color_image = frame
-        # color_image=  cv2.rotate(color_image, cv2.ROTATE_180)     ### camara rotada de RGB
+        color_image=  cv2.rotate(color_image, cv2.ROTATE_180)     ### camara rotada de RGB
         cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(0, 0, 255), thickness=2)
         corner1 = (corners[0][0], corners[0][1])
         corner2 = (corners[1][0], corners[1][1])
@@ -80,26 +83,43 @@ try:
             imagen= color_image.copy()
             M = cv2.getPerspectiveTransform(npcorners, dst)
             grid = cv2.warpPerspective(imagen, M, (maxWidth, maxHeight))
-             #rgb_image = cv2.cvtColor(grid, cv2.COLOR_BGR2RGB)
-                        
+            #rgb_image = cv2.cvtColor(grid, cv2.COLOR_BGR2RGB)
+                            # Realizar la detección de la pose
+            results = pose.process(grid)
 
-            results = hands.process(grid)
+            # results = hands.process(grid)
 
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    mp_drawing.draw_landmarks(grid, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                    index_tip_landmark = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-                    x_pixel1, y_pixel1 = int(index_tip_landmark.x * color_image.shape[1]), int(index_tip_landmark.y * color_image.shape[0])
-                    cv2.putText(color_image, f'Pixel XY: {x_pixel1}, {y_pixel1}', (50,100),
-                                cv2.FONT_HERSHEY_PLAIN, 3, (30,144,255), 2)
-                    #pyautogui.moveTo((x_pixel1 +1920),y_pixel1)
-                    #pyautogui.click(x_pixel1 +1920,y_pixel1)
-                    # time.sleep(0.5)
-                    cv2.circle(grid, (x_pixel1, y_pixel1), 15, (0, 255, 0), -1)
+
+
+            # if results.multi_hand_landmarks:
+            #     for hand_landmarks in results.multi_hand_landmarks:
+            #         mp_drawing.draw_landmarks(grid, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            #         index_tip_landmark = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+            #         x_pixel1, y_pixel1 = int(index_tip_landmark.x * color_image.shape[1]), int(index_tip_landmark.y * color_image.shape[0])
+            #         cv2.putText(color_image, f'Pixel XY: {x_pixel1}, {y_pixel1}', (50,100),
+            #                     cv2.FONT_HERSHEY_PLAIN, 3, (30,144,255), 2)
+            #         pyautogui.moveTo((x_pixel1 +1920),y_pixel1)
+            #         print(x_pixel1,y_pixel1)
+            #         #pyautogui.click(x_pixel1 +1920,y_pixel1)
+            #         # time.sleep(0.5)
+            #         cv2.circle(grid, (x_pixel1, y_pixel1), 15, (0, 255, 0), -1)
 
 
             
-            cv2.imshow('mascara',grid)
+            # cv2.imshow('mascara',grid)
+
+            # Extraer la coordenada de la mano derecha si está disponible
+            if results.pose_landmarks:
+                right_hand_coords = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_INDEX]
+                height, width, _ = imagen.shape
+                cx, cy = int(right_hand_coords.x * width), int(right_hand_coords.y * height)
+                cv2.circle(grid, (cx, cy), 5, (0, 255, 0), -1)
+                print("Coordenada de la mano derecha:", cx, cy)
+                pyautogui.moveTo((cx+1920),cy)
+
+            # Mostrar el resultado
+            cv2.imshow('Pose Detection', grid)
+
  
 
         cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(255,144,30), thickness=2)
