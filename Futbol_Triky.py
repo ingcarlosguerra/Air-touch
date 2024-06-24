@@ -21,7 +21,7 @@ if not found_rgb:
     print("The demo requires Depth camera with Color sensor")
     exit(0)
 
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
 
 if device_product_line == 'L500':
     config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
@@ -139,7 +139,7 @@ try:
             mask2 = cv2.inRange(hsv, lower_red, upper_red)
             mask = mask1 + mask2
             contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            min_contour_area = 1500  # Puedes ajustar este valor según sea necesario es un filtro de contorno por area
+            min_contour_area = 2000  # Puedes ajustar este valor según sea necesario es un filtro de contorno por area
             filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
 
             if len(filtered_contours) > 0:
@@ -155,7 +155,7 @@ try:
                 # Mueve el cursor a la posición deseada
                 pyautogui.moveTo(cx, cy)
                 # # Hace clic en la posición actual del cursor
-                pyautogui.click(cx,cy)
+                # pyautogui.click(cx,cy)
                 import time
                 time.sleep(0.38)
 

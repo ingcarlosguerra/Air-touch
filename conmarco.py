@@ -40,8 +40,8 @@ print("Depth Scale is: " , depth_scale)
 
 # We will be removing the background of objects more than
 #  clipping_distance_in_meters meters away
-clipping_distance_in_meters_max = 1.2#1 meter
-clipping_distance_in_meters_min = 1.1#1 meter
+clipping_distance_in_meters_max = 2.0#1 meter
+clipping_distance_in_meters_min = 2.1#1 meter
 
 clipping_distance_max = clipping_distance_in_meters_max / depth_scale
 clipping_distance_min = clipping_distance_in_meters_min / depth_scale
@@ -138,11 +138,9 @@ try:
 
         M = cv2.getPerspectiveTransform(npcorners, dst)
         grid = cv2.warpPerspective(bg_removed, M, (maxWidth, maxHeight))
-        # grid es la variable que me permite solo analizar el area deseada
 
         img_resized = cv2.resize(grid, (1920, 1080), interpolation = cv2.INTER_AREA)
         hsv = cv2.cvtColor(img_resized, cv2.COLOR_BGR2HSV)
-        # Define el rango de colores rojos en HSV
         lower_red = np.array([0, 50, 50])
         upper_red = np.array([10, 255, 255])
         mask1 = cv2.inRange(hsv, lower_red, upper_red)
@@ -163,10 +161,8 @@ try:
                     # Encuentra el contorno más grande
             largest_contour = max(filtered_contours, key=cv2.contourArea)
 
-            # Encuentra el centro del contorno más grande
             M = cv2.moments(largest_contour)
             if M['m00'] == 0:
-                # Manejar el error de división por cero aquí
                 cx = 0
             else:
                 cx = int(M['m10'] / M['m00'])

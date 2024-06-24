@@ -10,8 +10,8 @@ if not cap.isOpened():
     print("No se puede abrir la cámara")
     exit()
 
-desired_width = 1920
-desired_height = 1080
+desired_width = 3840  #3840 4K
+desired_height = 2160  #2160  4K
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
 desired_fps = 30
@@ -99,49 +99,40 @@ try:
             results = hands.process(rgb_image)
             color_image_for_drawing = grid.copy()
             hsv = cv2.cvtColor(color_image_for_drawing, cv2.COLOR_BGR2HSV)
-            lower_red1 = np.array([0, 70, 50])
-            upper_red1 = np.array([10, 255, 255])
-            lower_red2 = np.array([170, 70, 50])
-            upper_red2 = np.array([180, 255, 255])
-            mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-            mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-            mask = cv2.bitwise_or(mask1, mask2)
-            img_resized = cv2.resize(mask, (1920, 1080), interpolation=cv2.INTER_AREA)
+            lower_green = np.array([60, 100, 50]) 
+            upper_green = np.array([85, 255, 255])  
+            mask = cv2.inRange(hsv, lower_green, upper_green)
+            gaussian_blur = cv2.GaussianBlur(mask, (5, 5), 0)
+            img_resized = cv2.resize(gaussian_blur, (1920, 1080), interpolation=cv2.INTER_AREA)
+            contours, _ = cv2.findContours(img_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-
-            # red_detection = cv2.bitwise_and(color_image_for_drawing, color_image_for_drawing, mask=mask)
-            # lower_green = np.array([35, 100, 50]) 
-            # upper_green = np.array([85, 255, 255])  
-            # mask = cv2.inRange(hsv, lower_green, upper_green)
-            contours, _ = cv2.findContours(img_resized, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            for cnt in contours:
-                approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
-                cv2.drawContours(img_resized, [cnt], 0, (255, 255,255), 5)
-                if len(approx) == 4:
-                    # Calcular el aspect ratio del contorno para diferenciar cuadrados de rectángulos
-                    x, y, w, h = cv2.boundingRect(approx)
-                    aspectRatio = float(w)/h
-                    if aspectRatio >= 0.95 and aspectRatio <= 1.05:
-                        shape_name = "Cuadrado"
-                else:
-                    shape_name = "Laser"
-                    M = cv2.moments(cnt)
-                    if M['m00'] != 0:
-                        cx = int(M['m10']/M['m00'])
-                        cy = int(M['m01']/M['m00'])
-                        cv2.putText(img_resized,shape_name, (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                        pyautogui.moveTo((1920+cx),cy,0.002)
+            if contours:
+                largest_contour = max(contours, key=cv2.contourArea)
+                area = cv2.contourArea(largest_contour)
+                if area > 1000:
+                    largest_contour = max(contours, key=cv2.contourArea)
+                    M = cv2.moments(largest_contour)
+                    if M["m00"] != 0:
+                        cX = int(M["m10"] / M["m00"])
+                        cY = int(M["m01"] / M["m00"])
                     else:
-                        cx, cy = 0, 0
+                        cX, cY = 0, 0 
 
-            cv2.imshow('Rojo detectado',mask)
-            # cv2.imshow('grid',red_regions)
-            
+                    cv2.drawContours(img_resized, [largest_contour], -1, (0, 255, 0), 2)
+                    cv2.circle(img_resized, (cX, cY), 7, (255, 0, 0), -1)
+                    pyautogui.moveTo((cX+1920),cY)
+
+            cv2.imshow('Verde detectado', img_resized) 
 
         cv2.polylines(color_image, [np.array(corners)], isClosed=True, color=(255,144,30), thickness=2)
         cv2.putText(color_image, "Iniciar Touch", (button_x, button_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(255,144,30), 2, cv2.LINE_AA)
         cv2.rectangle(color_image, (button_x, button_y), (button_x + button_w, button_y + button_h), (255,144,30), 2)
         cv2.imshow('Camera', color_image)
+        # Obtiene las dimensiones de la imagen
+        alto, ancho, canales = color_image.shape
+
+        # Imprime las dimensiones
+        print(f"Ancho: {ancho}, Alto: {alto}, Canales: {canales}")
 
         key = cv2.waitKey(1)
 
